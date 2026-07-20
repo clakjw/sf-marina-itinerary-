@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Day in the Marina — San Francisco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #EEF3F4;
+    font-family: 'DM Sans', sans-serif;
+    color: #24343B;
+    padding: 40px 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 560px;
+  }
+  .header { margin-bottom: 28px; }
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #7A8A90;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.2;
+    color: #1B2E36;
+  }
+  .subline {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #5C6E75;
+    line-height: 1.5;
+  }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7A8A90;
+    margin: 32px 0 12px;
+  }
+
+  #map {
+    height: 380px;
+    border-radius: 16px;
+    border: 1px solid #E1DFD5;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .map-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #7A8A90;
+    text-align: center;
+  }
+  /* Custom numbered marker */
+  .num-marker {
+    background: #FBF9F5;
+    border: 2px solid #D95F3B;
+    border-radius: 50%;
+    width: 34px !important;
+    height: 34px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: #1B2E36;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  /* Leaflet popup restyle */
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  }
+  .leaflet-popup-content {
+    margin: 12px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .popup-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 15px;
+    color: #1B2E36;
+    margin-bottom: 4px;
+  }
+  .popup-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #D95F3B;
+    margin-bottom: 6px;
+  }
+  .popup-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #6B9DAE;
+    text-decoration: none;
+    border-bottom: 1px solid #6B9DAE;
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 26px;
+    margin-top: 8px;
+  }
+  .rail {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    bottom: 6px;
+    width: 1.5px;
+    background: linear-gradient(180deg, #D95F3B 0%, #6B9DAE 55%, #D95F3B 100%);
+    opacity: 0.55;
+  }
+  .stop { position: relative; margin-bottom: 22px; }
+  .dot {
+    position: absolute;
+    left: -26px;
+    top: 4px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #FBF9F5;
+    border: 2px solid #D95F3B;
+  }
+  .stop.walk .dot { border-color: #6B9DAE; }
+  .card {
+    background: #FBF9F5;
+    border: 1px solid #E1DFD5;
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .stop.walk .card {
+    background: transparent;
+    border: none;
+    padding: 4px 0 4px 2px;
+  }
+  .time {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: #D95F3B;
+    letter-spacing: 0.02em;
+  }
+  .stop.walk .time { color: #6B9DAE; }
+  .place {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+    color: #1B2E36;
+    margin-top: 4px;
+  }
+  .stop.walk .place {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: #5C6E75;
+    margin-top: 2px;
+  }
+  .desc {
+    font-size: 13px;
+    color: #5C6E75;
+    line-height: 1.55;
+    margin-top: 6px;
+  }
+  .card a.maplink {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #6B9DAE;
+    text-decoration: none;
+    border-bottom: 1px solid #6B9DAE;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: #6B9DAE;
+    background: #E7EFF1;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin-top: 8px;
+    margin-right: 6px;
+  }
+  .tips {
+    margin-top: 24px;
+    background: #1B2E36;
+    border-radius: 16px;
+    padding: 20px 20px;
+  }
+  .tips-title {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    color: #F4EFE4;
+    margin-bottom: 12px;
+  }
+  .tip {
+    display: flex;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #C7D3D6;
+    line-height: 1.55;
+    margin-bottom: 8px;
+  }
+  .tip:last-child { margin-bottom: 0; }
+  .footer {
+    text-align: center;
+    margin-top: 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: #A3ADB1;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="header">
+    <div class="eyebrow">San Francisco · One day</div>
+    <h1>A Day in the Marina</h1>
+    <div class="subline">Start at Land's End, then a long lunch (with coffee and dessert built in) and a short walking loop through the Marina.</div>
+  </div>
+
+  <div class="section-label">Route</div>
+  <div id="map"></div>
+  <div class="map-note">Tap a pin to open the location in Google Maps.</div>
+
+  <div class="section-label">Schedule</div>
+  <div class="timeline">
+    <div class="rail"></div>
+
+    <div class="stop">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="time">11:00 – 12:30</div>
+        <div class="place">Land's End Trail</div>
+        <div class="desc">Coastal hike out to Eagle's Point for the Golden Gate view, then down to the Sutro Baths ruins. Round trip is an easy 40–60 min walk.</div>
+        <span class="tag">Hike</span>
+        <a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Lands+End+Lookout+San+Francisco">Open in Google Maps ↗</a>
+      </div>
+    </div>
+
+    <div class="stop walk">
+      <div class="dot"></div>
+      <div class="place">Drive to Chestnut Street</div>
+      <div class="desc" style="margin-top:2px;">~20 min · park here for the rest of the day</div>
+    </div>
+
+    <div class="stop">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="time">1:00 – 2:30</div>
+        <div class="place">Lunch + Dessert + Coffee</div>
+        <div class="desc">Sit-down lunch on Chestnut Street, then linger for dessert and coffee at the same spot.</div>
+        <span class="tag">Lunch · TBD</span>
+        <a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Chestnut+Street+Marina+San+Francisco">Open in Google Maps ↗</a>
+      </div>
+    </div>
+
+    <div class="stop walk">
+      <div class="dot"></div>
+      <div class="place">Walk to Palace of Fine Arts</div>
+      <div class="desc" style="margin-top:2px;">~10 min on foot</div>
+    </div>
+
+    <div class="stop">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="time">2:40 – 3:15</div>
+        <div class="place">Palace of Fine Arts</div>
+        <div class="desc">Rotunda and lagoon walk — one of the most photogenic corners of the city, swans included.</div>
+        <span class="tag">Sightseeing</span>
+        <a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Palace+of+Fine+Arts+San+Francisco">Open in Google Maps ↗</a>
+      </div>
+    </div>
+
+    <div class="stop walk">
+      <div class="dot"></div>
+      <div class="place">Walk to Marina Green</div>
+      <div class="desc" style="margin-top:2px;">~20 min on foot</div>
+    </div>
+
+    <div class="stop">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="time">3:35 – 4:05</div>
+        <div class="place">Marina Green</div>
+        <div class="desc">Wide open lawn along the bay with the Golden Gate Bridge in view — where locals jog, walk dogs, and fly kites. A good, short stretch to slow down and talk.</div>
+        <span class="tag">Walk</span>
+        <a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Marina+Green+San+Francisco">Open in Google Maps ↗</a>
+      </div>
+    </div>
+
+    <div class="stop walk">
+      <div class="dot"></div>
+      <div class="place">Walk back to Chestnut Street</div>
+      <div class="desc" style="margin-top:2px;">~20 min</div>
+    </div>
+
+    <div class="stop">
+      <div class="dot"></div>
+      <div class="card">
+        <div class="time">4:25 – 5:00 <span style="color:#7A8A90;">(optional)</span></div>
+        <div class="place">Ice cream or coffee — if we're up for it</div>
+        <div class="desc">Back on Chestnut Street. Grab something sweet or a coffee to wind down, or skip and head out.</div>
+        <span class="tag">Optional · TBD</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tips">
+    <div class="tips-title">Notes</div>
+    <div class="tip"><span>—</span><span>The car moves only once — Land's End to Chestnut Street. Everything from lunch onward is on foot, about 50 minutes of walking total.</span></div>
+    <div class="tip"><span>—</span><span>Wear layers — it can be windy near the water even on a sunny afternoon.</span></div>
+    <div class="tip"><span>—</span><span>Lunch spot on Chestnut Street is TBD — the final coffee / ice cream stop is optional depending on how everyone feels.</span></div>
+  </div>
+
+  <div class="footer">A DAY IN THE MARINA · SF</div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  const stops = [
+    {
+      n: 1,
+      lat: 37.7838,
+      lng: -122.5064,
+      title: "Land's End Trail",
+      time: "11:00 – 12:30",
+      gmap: "https://www.google.com/maps/search/?api=1&query=Lands+End+Lookout+San+Francisco"
+    },
+    {
+      n: 2,
+      lat: 37.8003,
+      lng: -122.4383,
+      title: "Chestnut Street",
+      time: "1:00 – 2:30 · lunch + dessert + coffee",
+      gmap: "https://www.google.com/maps/search/?api=1&query=Chestnut+Street+Marina+San+Francisco"
+    },
+    {
+      n: 3,
+      lat: 37.8029,
+      lng: -122.4484,
+      title: "Palace of Fine Arts",
+      time: "2:40 – 3:15",
+      gmap: "https://www.google.com/maps/search/?api=1&query=Palace+of+Fine+Arts+San+Francisco"
+    },
+    {
+      n: 4,
+      lat: 37.8062,
+      lng: -122.4419,
+      title: "Marina Green",
+      time: "3:35 – 4:05",
+      gmap: "https://www.google.com/maps/search/?api=1&query=Marina+Green+San+Francisco"
+    }
+  ];
+
+  const map = L.map('map', { scrollWheelZoom: false }).setView([37.795, -122.470], 13);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Draw route lines
+  const driveLine = L.polyline(
+    [[stops[0].lat, stops[0].lng], [stops[1].lat, stops[1].lng]],
+    { color: '#D95F3B', weight: 3, opacity: 0.75, dashArray: '8 6' }
+  ).addTo(map);
+
+  const walkLine = L.polyline(
+    [
+      [stops[1].lat, stops[1].lng],
+      [stops[2].lat, stops[2].lng],
+      [stops[3].lat, stops[3].lng],
+      [stops[1].lat, stops[1].lng]
+    ],
+    { color: '#6B9DAE', weight: 3, opacity: 0.85, dashArray: '4 5' }
+  ).addTo(map);
+
+  stops.forEach(s => {
+    const icon = L.divIcon({
+      className: 'num-marker',
+      html: s.n,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+    const marker = L.marker([s.lat, s.lng], { icon }).addTo(map);
+    marker.bindPopup(`
+      <div class="popup-title">${s.title}</div>
+      <div class="popup-time">${s.time}</div>
+      <a class="popup-link" target="_blank" rel="noopener" href="${s.gmap}">Open in Google Maps ↗</a>
+    `);
+  });
+
+  // Fit bounds to all stops with some padding
+  const group = L.featureGroup([driveLine, walkLine]);
+  map.fitBounds(group.getBounds().pad(0.15));
+</script>
+
+</body>
+</html>
